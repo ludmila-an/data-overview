@@ -8,6 +8,43 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
+    #pw-overlay {
+      position: fixed; inset: 0; background: #0a0f1e;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999; flex-direction: column; gap: 16px;
+    }
+    #pw-overlay h2 { color: #e6edf3; font-family: Inter, sans-serif; font-size: 1.2rem; font-weight: 500; }
+    #pw-overlay input {
+      padding: 10px 16px; border-radius: 8px; border: 1px solid #243050;
+      background: #111827; color: #e6edf3; font-size: 1rem; width: 240px; outline: none;
+    }
+    #pw-overlay button {
+      padding: 10px 24px; border-radius: 8px; border: none;
+      background: #3b82f6; color: #fff; font-size: 1rem; cursor: pointer;
+    }
+    #pw-error { color: #f87171; font-family: Inter, sans-serif; font-size: 0.85rem; min-height: 1rem; }
+  </style>
+  <script>
+    (function() {
+      if (sessionStorage.getItem('auth') !== '1') {
+        document.addEventListener('DOMContentLoaded', function() {
+          var overlay = document.getElementById('pw-overlay');
+          document.getElementById('pw-btn').addEventListener('click', function() {
+            if (document.getElementById('pw-input').value === 'butterfly') {
+              sessionStorage.setItem('auth', '1');
+              overlay.remove();
+            } else {
+              document.getElementById('pw-error').textContent = 'Falsches Passwort.';
+            }
+          });
+          document.getElementById('pw-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') document.getElementById('pw-btn').click();
+          });
+        });
+      }
+    })();
+  </script>
+  <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -521,6 +558,12 @@
   </style>
 </head>
 <body>
+<div id="pw-overlay" style="display:flex">
+  <h2>20 Minuten | Data Landscape</h2>
+  <input id="pw-input" type="password" placeholder="Passwort" autofocus />
+  <button id="pw-btn">Einloggen</button>
+  <span id="pw-error"></span>
+</div>
 
 <!-- ─── TOP BAR ──────────────────────────────────────────────────── -->
 <div id="topbar">
