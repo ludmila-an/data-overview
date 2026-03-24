@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>20 Minuten | Data Landscape</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0f1e;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #243050;
+      --text: #e6edf3;
+      --text-muted: #7d8590;
+      --text-dim: #484f58;
+      --accent: #2659FF;
+      --accent-glow: #00D5FF;
+      --danger: #da3633;
+      --success: #3fb950;
+      --warning: #d29922;
+
+      --sapphire:    #0D2880;
+      --electricity: #2659FF;
+      --azure:       #00D5FF;
+      --ice:         #EDF4FF;
+      --violet:      #9630FF;
+      --purple:      #C929FF;
+
+      --c-database: #2659FF;
+      --c-tool:     #0099BB;
+      --c-ai:       #9630FF;
+      --c-pipeline: #00D5FF;
+      --c-report:   #C929FF;
+      --c-project:  #0D2880;
+      --c-other:    #6B7280;
+
+      --panel-w: 340px;
+      --topbar-h: 56px;
+      --radius: 8px;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ─── TOP BAR ───────────────────────────────────────────────── */
+    #topbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--topbar-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 16px;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 700; font-size: 15px; white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .logo-badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.03em;
+    }
+    .logo-sep { color: var(--border); font-size: 20px; margin: 0 2px; }
+    .logo-title { color: var(--text-muted); font-weight: 500; font-size: 13px; }
+
+    #search-wrap {
+      position: relative; flex: 1; max-width: 280px;
+    }
+    #search-wrap svg {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); pointer-events: none;
+    }
+    #search {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 7px 10px 7px 34px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    #search:focus { border-color: var(--azure); }
+    #search::placeholder { color: var(--text-dim); }
+
+    .filter-row {
+      display: flex; gap: 4px; align-items: center; overflow-x: auto;
+      scrollbar-width: none; flex-shrink: 0;
+    }
+    .filter-row::-webkit-scrollbar { display: none; }
+
+    .filter-btn {
+      padding: 4px 11px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .filter-btn:hover { background: var(--surface2); color: var(--text); }
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .topbar-spacer { flex: 1; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+    }
+    .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+    .btn-primary {
+      background: var(--accent); border-color: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-secondary {
+      background: var(--surface2); color: var(--text);
+    }
+    .btn-secondary:hover { border-color: #555; }
+    .btn-danger {
+      background: transparent; border-color: var(--danger); color: var(--danger);
+    }
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+    .btn-icon {
+      padding: 7px 8px; background: transparent;
+      color: var(--text-muted); border-color: transparent;
+    }
+    .btn-icon:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+
+    /* ─── GRAPH ─────────────────────────────────────────────────── */
+    #graph-wrap {
+      position: fixed;
+      top: var(--topbar-h); left: 0; right: 0; bottom: 0;
+    }
+    #graph-wrap svg { width: 100%; height: 100%; }
+
+    .link-path {
+      stroke: #2d3a55;
+      stroke-width: 1.5;
+      fill: none;
+      cursor: pointer;
+      transition: stroke .15s, opacity .2s;
+    }
+    .link-path:hover { stroke: #5b6a8a; }
+
+    .node.faded { opacity: 0.08; transition: opacity .2s; }
+    .link.faded { opacity: 0.05; transition: opacity .2s; }
+
+    .link-hit {
+      fill: none;
+      stroke: transparent;
+      stroke-width: 20;
+      cursor: pointer;
+    }
+
+    .hull-path { pointer-events: none; }
+    .hull-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+      user-select: none;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .link-label {
+      fill: #484f58;
+      font-size: 10px;
+      font-family: 'Inter', sans-serif;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .node { cursor: pointer; }
+    .node-label {
+      fill: #c9d1d9;
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+      pointer-events: none;
+      user-select: none;
+    }
+    .node-team {
+      fill: #5b6a8a;
+      font-size: 9px;
+      font-family: 'Inter', sans-serif;
+      pointer-events: none;
+      user-select: none;
+    }
+    .node-icon {
+      fill: rgba(255,255,255,0.9);
+      font-size: 9px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      pointer-events: none;
+      user-select: none;
+      letter-spacing: 0;
+    }
+    .node.selected circle.node-circle {
+      stroke-width: 3;
+      filter: drop-shadow(0 0 8px currentColor);
+    }
+    .node.dimmed { opacity: 0.2; }
+
+    /* ─── DETAIL PANEL ───────────────────────────────────────────── */
+    #detail-panel {
+      position: fixed;
+      top: var(--topbar-h); right: 0; bottom: 0;
+      width: var(--panel-w);
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform .25s cubic-bezier(.4,0,.2,1);
+      z-index: 90;
+      overflow: hidden;
+    }
+    #detail-panel.open { transform: translateX(0); }
+
+    .panel-header {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-header-info { flex: 1; min-width: 0; }
+    .panel-close {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; padding: 2px; font-size: 16px; line-height: 1;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .panel-close:hover { color: var(--text); }
+
+    #detail-name {
+      font-size: 16px; font-weight: 600;
+      word-break: break-word;
+      margin-bottom: 8px;
+    }
+
+    .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 9px;
+      border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .badge-type { color: #000; }
+    .badge-status-active    { background: rgba(63,185,80,.15); color: var(--success); border: 1px solid rgba(63,185,80,.3); }
+    .badge-status-planned   { background: rgba(210,153,34,.15); color: var(--warning); border: 1px solid rgba(210,153,34,.3); }
+    .badge-status-deprecated{ background: rgba(218,54,51,.15); color: var(--danger); border: 1px solid rgba(218,54,51,.3); }
+
+    .panel-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+    .panel-body::-webkit-scrollbar { width: 6px; }
+    .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .meta-row {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--text-muted); font-size: 13px; margin-bottom: 8px;
+    }
+    .meta-row svg { flex-shrink: 0; }
+    .meta-row span { color: var(--text); }
+
+    .section { margin-top: 20px; }
+    .section-title {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .05em;
+      color: var(--text-dim); margin-bottom: 10px;
+    }
+
+    #detail-description { color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+
+    .tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .tag-project {
+      background: rgba(150, 48, 255, 0.12);
+      border: 1px solid rgba(150, 48, 255, 0.3);
+      color: var(--violet);
+    }
+
+    .conn-list { display: flex; flex-direction: column; gap: 6px; }
+    .conn-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color .15s;
+      text-decoration: none; color: inherit;
+    }
+    .conn-item:hover { border-color: #555; }
+    .conn-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .conn-info { flex: 1; min-width: 0; }
+    .conn-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .conn-rel  { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .panel-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 8px;
+    }
+    .panel-footer .btn { flex: 1; justify-content: center; }
+
+    /* ─── MODALS ─────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 480px; max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 64px);
+      display: flex; flex-direction: column;
+      transform: translateY(16px);
+      transition: transform .2s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title { font-size: 16px; font-weight: 600; }
+    .modal-close {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 18px; line-height: 1; padding: 2px;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+    .modal-body::-webkit-scrollbar { width: 6px; }
+    .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .form-row { margin-bottom: 16px; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    label {
+      display: block;
+      font-size: 12px; font-weight: 500; color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    input[type=text], select, textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input[type=text]:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    select option { background: var(--surface2); }
+    textarea { resize: vertical; min-height: 72px; }
+
+    .color-preview {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 50%; margin-right: 6px; vertical-align: middle;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+
+    /* ─── CONTEXT MENU (edge click) ─────────────────────────────── */
+    #ctx-menu {
+      position: fixed;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
+      z-index: 300;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      display: none;
+    }
+    #ctx-menu button {
+      display: block; width: 100%;
+      text-align: left;
+      background: none; border: none;
+      color: var(--text); font-family: inherit; font-size: 13px;
+      padding: 7px 14px;
+      cursor: pointer; border-radius: 4px;
+    }
+    #ctx-menu button:hover { background: var(--surface2); }
+    #ctx-menu button.danger { color: var(--danger); }
+
+    /* ─── LEGEND ─────────────────────────────────────────────────── */
+    #legend {
+      position: fixed; bottom: 20px; left: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      z-index: 80;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .legend-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: var(--text-muted);
+    }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ─── TOAST ──────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 18px;
+      font-size: 13px;
+      z-index: 400;
+      opacity: 0;
+      transition: opacity .2s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ─── EMPTY STATE ────────────────────────────────────────────── */
+    #empty-state {
+      position: absolute; inset: 0;
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px;
+      color: var(--text-muted); text-align: center;
+      pointer-events: none;
+    }
+    #empty-state svg { opacity: .3; }
+    #empty-state p { font-size: 14px; }
+
+    /* ─── NODE TOOLTIP ───────────────────────────────────────────── */
+    #node-tooltip {
+      position: fixed;
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--electricity);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.6;
+      z-index: 500;
+      pointer-events: none;
+      max-width: 220px;
+      box-shadow: 0 4px 20px rgba(38, 89, 255, 0.2);
+    }
+    .tt-title {
+      font-weight: 600;
+      color: var(--azure);
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+    .tt-item {
+      color: var(--text-muted);
+    }
+
+    /* scrollbar global */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- ─── TOP BAR ──────────────────────────────────────────────────── -->
+<div id="topbar">
+  <div class="logo">
+    <span class="logo-badge">20min</span>
+    <span class="logo-sep">|</span>
+    <span class="logo-title">Data Landscape</span>
+  </div>
+
+  <div id="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/>
+    </svg>
+    <input type="text" id="search" placeholder="Suchen…" autocomplete="off" />
+  </div>
+
+  <div class="filter-row" id="filter-row">
+    <button class="filter-btn active" data-type="all">Alle</button>
+    <!-- dynamically filled -->
+  </div>
+
+  <div class="filter-row" id="team-filter-row" style="margin-top:4px">
+    <button class="filter-btn active" data-team="all">Alle Teams</button>
+    <!-- dynamically filled -->
+  </div>
+
+  <div class="topbar-spacer"></div>
+
+  <button class="btn btn-ghost" onclick="resetToSeed()" title="Alle Daten auf Standard zurücksetzen" style="color:var(--danger);border-color:var(--danger)">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="1 4 1 10 7 10"/><path d="M1 10A7 7 0 1 0 3.5 4.2"/>
+    </svg>
+    Seed
+  </button>
+  <button class="btn btn-ghost" onclick="resetLayout()" title="Layout zurücksetzen">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M1 8a7 7 0 1 0 7-7"/><path d="M1 1v4h4"/>
+    </svg>
+    Reset
+  </button>
+  <button class="btn btn-ghost" onclick="triggerImport()" title="Importieren">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M8 2v9M4 7l4 4 4-4M2 13h12"/>
+    </svg>
+    Import
+  </button>
+  <button class="btn btn-ghost" onclick="exportData()" title="Exportieren">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M8 11V2M4 5L8 1l4 4M2 13h12"/>
+    </svg>
+    Export
+  </button>
+  <button class="btn btn-ghost" onclick="openEdgeModal()" title="Verbindung hinzufügen">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M3 8h10M11 5l3 3-3 3"/><circle cx="3" cy="8" r="1.5" fill="currentColor" stroke="none"/>
+    </svg>
+    Verbindung
+  </button>
+  <button class="btn btn-primary" onclick="openNodeModal(null)">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M8 2v12M2 8h12"/>
+    </svg>
+    Hinzufügen
+  </button>
+</div>
+
+<!-- ─── GRAPH ─────────────────────────────────────────────────────── -->
+<div id="graph-wrap">
+  <div id="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+    </svg>
+    <p>Keine Elemente vorhanden.<br>Klick auf "Hinzufügen" um zu starten.</p>
+  </div>
+</div>
+
+<!-- ─── DETAIL PANEL ──────────────────────────────────────────────── -->
+<div id="detail-panel">
+  <div class="panel-header">
+    <div class="panel-header-info">
+      <div id="detail-name"></div>
+      <div class="badges">
+        <span id="detail-type-badge" class="badge badge-type"></span>
+        <span id="detail-status-badge" class="badge"></span>
+      </div>
+    </div>
+    <button class="panel-close" onclick="closeDetailPanel()">✕</button>
+  </div>
+  <div class="panel-body">
+    <div class="meta-row">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+      </svg>
+      <span id="detail-owner"></span>
+    </div>
+    <div class="meta-row">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M2 14V6l6-4 6 4v8"/><path d="M6 14v-4h4v4"/>
+      </svg>
+      <span id="detail-tenant"></span>
+    </div>
+    <div class="meta-row" id="detail-team-row">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="5" cy="6" r="2.5"/><circle cx="11" cy="6" r="2.5"/>
+        <path d="M1 14c0-2.2 1.8-4 4-4"/><path d="M11 10c2.2 0 4 1.8 4 4"/>
+        <path d="M5 10c1.1 0 2 .4 2.7 1"/>
+      </svg>
+      <span id="detail-teams"></span>
+    </div>
+    <div id="detail-url-row" class="meta-row" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M6 11a5 5 0 0 1 0-6l1-1a3.5 3.5 0 0 1 5 5l-1 1"/><path d="M10 5a5 5 0 0 1 0 6l-1 1a3.5 3.5 0 0 1-5-5l1-1"/>
+      </svg>
+      <a id="detail-url" target="_blank" rel="noopener" style="color:var(--accent);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></a>
+    </div>
+
+    <div class="section" id="desc-section">
+      <div class="section-title">Beschreibung</div>
+      <p id="detail-description"></p>
+    </div>
+
+    <div class="section" id="projects-section">
+      <div class="section-title">Projekte / Use Cases</div>
+      <div class="tags-wrap" id="detail-projects"></div>
+    </div>
+
+    <div class="section" id="tags-section">
+      <div class="section-title">Tags</div>
+      <div class="tags-wrap" id="detail-tags"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Verbindungen</div>
+      <div class="conn-list" id="detail-connections"></div>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <button class="btn btn-secondary" style="font-size:12px" onclick="openEdgeModalFromNode()">+ Link</button>
+    <button class="btn btn-secondary" onclick="editSelectedNode()">Bearbeiten</button>
+    <button class="btn btn-danger" onclick="deleteSelectedNode()">Löschen</button>
+  </div>
+</div>
+
+<!-- ─── LEGEND ─────────────────────────────────────────────────────── -->
+<div id="legend"></div>
+
+<!-- ─── NODE MODAL ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="node-modal-overlay" onclick="handleOverlayClick(event,'node-modal-overlay')">
+  <div class="modal" id="node-modal">
+    <div class="modal-header">
+      <span class="modal-title" id="node-modal-title">Element hinzufügen</span>
+      <button class="modal-close" onclick="closeNodeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Name *</label>
+        <input type="text" id="f-label" placeholder="z.B. Snowflake DWH" />
+      </div>
+      <div class="form-row-2">
+        <div>
+          <label>Kategorie *</label>
+          <select id="f-type" onchange="updateTypePreview()">
+            <option value="Tool">Tool</option>
+            <option value="Database">Datenbank</option>
+            <option value="Pipeline">Pipeline</option>
+            <option value="Report">Report</option>
+            <option value="AI">AI</option>
+            <option value="Project">Projekt</option>
+            <option value="Agent">Agent</option>
+            <option value="Other">Sonstiges</option>
+          </select>
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="f-status">
+            <option value="active">Aktiv</option>
+            <option value="planned">Geplant</option>
+            <option value="deprecated">Veraltet</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div>
+          <label>Verantwortliche Person *</label>
+          <input type="text" id="f-owner" placeholder="Name" />
+        </div>
+        <div>
+          <label>Tenant</label>
+          <input type="text" id="f-tenant" placeholder="z.B. 20 Minuten" />
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Beschreibung</label>
+        <textarea id="f-description" placeholder="Wofür dient dieses Element?"></textarea>
+      </div>
+      <div class="form-row">
+        <label>Projekte / Use Cases (kommagetrennt)</label>
+        <input type="text" id="f-projects" placeholder="z.B. A/B tests, Dashboards" />
+      </div>
+      <div class="form-row">
+        <label>URL (optional)</label>
+        <input type="text" id="f-url" placeholder="https://…" />
+      </div>
+      <div class="form-row">
+        <label>Tags (kommagetrennt)</label>
+        <input type="text" id="f-tags" placeholder="cloud, SQL, production" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeNodeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveNode()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── EDGE MODAL ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="edge-modal-overlay" onclick="handleOverlayClick(event,'edge-modal-overlay')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Verbindung hinzufügen</span>
+      <button class="modal-close" onclick="closeEdgeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Von *</label>
+        <select id="f-source"></select>
+      </div>
+      <div class="form-row">
+        <label>Nach *</label>
+        <select id="f-target"></select>
+      </div>
+      <div class="form-row">
+        <label>Bezeichnung</label>
+        <input type="text" id="f-edge-label" placeholder="z.B. lädt nach, Quelle für…" />
+      </div>
+      <div class="form-row">
+        <label>Typ</label>
+        <select id="f-edge-type">
+          <option value="data-flow">Datenfluss</option>
+          <option value="dependency">Abhängigkeit</option>
+          <option value="integration">Integration</option>
+          <option value="ownership">Zugehörigkeit</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeEdgeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveEdge()">Verbindung erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── CONTEXT MENU ───────────────────────────────────────────────── -->
+<div id="ctx-menu">
+  <button id="ctx-info">Details anzeigen</button>
+  <button id="ctx-delete" class="danger">Verbindung löschen</button>
+</div>
+
+<!-- ─── TOAST ──────────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- hidden import input -->
+<input type="file" id="import-input" accept=".json" style="display:none" />
+
+<!-- ─── NODE TOOLTIP ──────────────────────────────────────────────── -->
+<div id="node-tooltip"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
