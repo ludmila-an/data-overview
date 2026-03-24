@@ -26,22 +26,24 @@
   </style>
   <script>
     (function() {
-      if (sessionStorage.getItem('auth') !== '1') {
-        document.addEventListener('DOMContentLoaded', function() {
-          var overlay = document.getElementById('pw-overlay');
-          document.getElementById('pw-btn').addEventListener('click', function() {
-            if (document.getElementById('pw-input').value === 'butterfly') {
-              sessionStorage.setItem('auth', '1');
-              overlay.remove();
-            } else {
-              document.getElementById('pw-error').textContent = 'Falsches Passwort.';
-            }
-          });
-          document.getElementById('pw-input').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') document.getElementById('pw-btn').click();
-          });
+      document.addEventListener('DOMContentLoaded', function() {
+        var overlay = document.getElementById('pw-overlay');
+        if (sessionStorage.getItem('auth') === '1') {
+          overlay.remove();
+          return;
+        }
+        document.getElementById('pw-btn').addEventListener('click', function() {
+          if (document.getElementById('pw-input').value === 'butterfly') {
+            sessionStorage.setItem('auth', '1');
+            overlay.remove();
+          } else {
+            document.getElementById('pw-error').textContent = 'Falsches Passwort.';
+          }
         });
-      }
+        document.getElementById('pw-input').addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') document.getElementById('pw-btn').click();
+        });
+      });
     })();
   </script>
   <style>
